@@ -1,19 +1,54 @@
+const TicketControl = require("../ticketControl");
 
-
+const ticketControl = new TicketControl();
 
 const socketController = (socket) => {
-    console.log('Client conectado', socket.id);
 
-    socket.on('disconnect', () => {
-        console.log('Client desconectado', socket.id);
-    });
+    // Cuando un cliente se conecta
+    socket.emit( 'ultimo-ticket', ticketControl.ultimo);
+    socket.emit( 'estado-actual', ticketControl.ultimos4); // disparamos el evento
+    socket.emit( 'tickets-pendientes', ticketControl.tickets.length);
 
-    socket.on('enviar-mensaje', ( payload, callback ) => { // escucha el mensaje q envia el cliente "enviar-mensaje"
+
+
+    socket.on('siguiente-ticket', ( payload, callback ) => { // escucha el mensaje q envia el cliente "enviar-mensaje"
         
-        socket.broadcast.emit('enviar mensaje', payload) // para que el mensaje que mande el client le llegue a todos los clientes conectados menos a el qe lo envia
+        const siguiente = ticketControl.siguiente();
 
-        const id = 123456;
-        callback(id); // se lo envia solo al cliente q ejecuta la accion
+        callback(siguiente);
+
+        
+        socket.broadcast.emit( 'tickets-pendientes', ticketControl.tickets.length);
+    })
+
+
+    socket.on('atender-ticket', ({ escritorio }, callback) => {
+        if (!escritorio) {
+            return callback({
+                ok: false,
+                msg: 'El escritorio es obligatorio'
+            })
+        }
+
+        const ticket = ticketControl.atenderTicket(escritorio);
+
+        // TODO: notificar que hay un nuevo ticket pendiente de asignar
+        socket.broadcast.emit( 'estado-actual', ticketControl.ultimos4);
+        socket.emit( 'tickets-pendientes', ticketControl.tickets.length);
+        socket.broadcast.emit( 'tickets-pendientes', ticketControl.tickets.length);
+
+
+        if (!ticket) {
+            return callback({
+                ok: false,
+                msg: 'Ya no hay tickets pendientes'
+            })
+        } else {
+            return callback({
+                ok: true,
+                ticket
+            })
+        }
     })
 
 };

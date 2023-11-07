@@ -5,7 +5,7 @@ require('dotenv').config()
 
 // const mainRouter = require('./routes/index')
 
-const port = process.env.PORT
+const port = process.env.PORT || 8080
 const app = express();
 
 // socket.io
